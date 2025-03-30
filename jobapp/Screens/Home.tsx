@@ -1,103 +1,102 @@
 import React, { useState } from 'react';
-import { 
-  View, Text, TextInput, FlatList, TouchableOpacity, Modal, 
-  StyleSheet, ScrollView, Image 
-} from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Switch, Modal, StyleSheet, ScrollView } from 'react-native';
+import RenderHtml from 'react-native-render-html';
 import { useGlobalContext } from '../context/globalContext';
+import { useNavigation } from '@react-navigation/native';
 
 export default function Home() {
-  const { jobs, isDarkMode, theme } = useGlobalContext();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [savedJobs, setSavedJobs] = useState<string[]>([]);
-  const [selectedJob, setSelectedJob] = useState<any | null>(null);
-  const [modalVisible, setModalVisible] = useState(false);
+  const { isDarkMode, toggleDarkMode, jobs, savedJobs, toggleSaveJob } = useGlobalContext();
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [showSavedJobs, setShowSavedJobs] = useState(false);
+  const navigation = useNavigation();
 
-  // Filter jobs based on search query
-  const filteredJobs = jobs.filter(job => 
-    job.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  // Save job
-  const handleSaveJob = (jobId: string) => {
-    setSavedJobs(prevSavedJobs =>
-      prevSavedJobs.includes(jobId) 
-        ? prevSavedJobs 
-        : [...prevSavedJobs, jobId]
-    );
-  };
-
-  // Open job details in a modal
-  const openJobDetails = (job: any) => {
-    setSelectedJob(job);
-    setModalVisible(true);
-  };
+  // Filter jobs based on whether the "Saved Jobs" tab is active
+  const displayedJobs = showSavedJobs ? jobs.filter(job => savedJobs.includes(job.id)) : jobs;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: isDarkMode ? '#121212' : '#F5FCFF' }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.headerText, { color: theme.text }]}>Discover Jobs</Text>
-        <TouchableOpacity>
-          <Text style={[styles.headerText, { color: theme.dominant }]}>Saved Jobs</Text>
-        </TouchableOpacity>
+        <View style={styles.tabContainer}>
+          <TouchableOpacity onPress={() => setShowSavedJobs(false)}>
+            <Text style={[styles.tabText, !showSavedJobs && styles.activeTab]}>Discover Jobs</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowSavedJobs(true)}>
+            <Text style={[styles.tabText, showSavedJobs && styles.activeTab]}>Saved Jobs</Text>
+          </TouchableOpacity>
+        </View>
+        <Switch value={isDarkMode} onValueChange={toggleDarkMode} />
       </View>
 
-      {/* Search Bar */}
-      <TextInput
-        style={[styles.searchBar, { borderColor: theme.dominant }]}
-        placeholder="Search jobs..."
-        placeholderTextColor={theme.text}
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-      />
-
-      {/* Job Listings */}
+      {/* Job List */}
       <FlatList
-        data={filteredJobs}
-        keyExtractor={item => item.id}
+        data={displayedJobs}
+        keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <TouchableOpacity onPress={() => openJobDetails(item)}>
-            <View style={[styles.jobCard, { backgroundColor: theme.cardBackground }]}>
-              <Text style={[styles.jobTitle, { color: theme.text }]}>{item.title}</Text>
-              <Text style={[styles.companyText, { color: theme.text }]}>
-                {item.companyName} - 💰{item.minSalary} - {item.maxSalary} USD
-              </Text>
-              <View style={styles.buttonContainer}>
-                <TouchableOpacity
-                  style={[styles.button, styles.saveButton]}
-                  onPress={() => handleSaveJob(item.id)}
-                >
-                  <Text style={styles.buttonText}>
-                    {savedJobs.includes(item.id) ? 'Saved' : 'Save Job'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, styles.applyButton]}>
-                  <Text style={styles.buttonText}>Apply</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+          <TouchableOpacity
+            style={[styles.jobCard, { backgroundColor: isDarkMode ? '#4A90E2' : '#87CEFA' }]}
+            onPress={() => setSelectedJob(item)}
+          >
+            <Text style={styles.jobTitle}>{item.title}</Text>
+            <Text style={styles.company}>{item.companyName}</Text>
           </TouchableOpacity>
         )}
+        ListEmptyComponent={<Text style={styles.noJobsText}>No jobs found.</Text>}
       />
 
-      {/* Job Details Modal */}
-      <Modal visible={modalVisible} transparent animationType="slide">
+      {/* Job Description Popup */}
+      <Modal visible={!!selectedJob} animationType="slide" transparent={true}>
         <View style={styles.modalContainer}>
-          <View style={[styles.modalContent, { backgroundColor: theme.cardBackground }]}>
+          <View style={[styles.modalContent, { backgroundColor: isDarkMode ? '#1E1E1E' : '#fff' }]}>
+            
+            {/* Back Button */}
+            <TouchableOpacity onPress={() => setSelectedJob(null)}>
+              <Text style={styles.backButton}>← Back</Text>
+            </TouchableOpacity>
+
+            {/* Job Title & Company */}
             {selectedJob && (
               <>
-                <Image source={{ uri: selectedJob.companyLogo }} style={styles.logo} />
-                <Text style={[styles.modalTitle, { color: theme.text }]}>{selectedJob.title}</Text>
-                <Text style={[styles.companyText, { color: theme.text }]}>
+                <Text style={[styles.modalTitle, { color: isDarkMode ? '#fff' : '#000' }]}>
+                  {selectedJob.title}
+                </Text>
+                <Text style={[styles.company, { color: isDarkMode ? '#fff' : '#000' }]}>
                   {selectedJob.companyName}
                 </Text>
-                <ScrollView>
-                  <Text style={[styles.description, { color: theme.text }]}>
-                    {selectedJob.description}
-                  </Text>
+
+                {/* Job Description with RenderHtml */}
+                <ScrollView style={styles.descriptionContainer}>
+                  <RenderHtml
+                    contentWidth={300}
+                    source={{ html: selectedJob.description }}
+                    tagsStyles={{
+                      p: { color: isDarkMode ? '#fff' : '#000', fontSize: 14 },
+                      strong: { color: isDarkMode ? '#fff' : '#000' },
+                    }}
+                  />
                 </ScrollView>
-                <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
-                  <Text style={[styles.closeText, { color: theme.accent }]}>Close</Text>
+
+<TouchableOpacity 
+  style={styles.applyButton}
+  onPress={() => {
+    setSelectedJob(null);
+    navigation.navigate('ApplicationForm', { job: selectedJob }); // Pass job details
+  }}
+>
+  <Text style={styles.buttonText}>Apply</Text>
+</TouchableOpacity>
+
+
+                <TouchableOpacity
+                  style={[
+                    styles.saveButton,
+                    savedJobs.includes(selectedJob.id) ? styles.savedButton : {}
+                  ]}
+                  onPress={() => toggleSaveJob(selectedJob.id)}
+                >
+                  <Text style={styles.buttonText}>
+                    {savedJobs.includes(selectedJob.id) ? 'Saved' : 'Save Job'}
+                  </Text>
                 </TouchableOpacity>
               </>
             )}
@@ -108,27 +107,28 @@ export default function Home() {
   );
 }
 
-// Styles
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
-  headerText: { fontSize: 20, fontWeight: 'bold' },
-  searchBar: { padding: 10, borderWidth: 1, borderRadius: 5, marginBottom: 10 },
-  jobCard: { padding: 15, borderRadius: 5, marginBottom: 10 },
-  jobTitle: { fontSize: 16, fontWeight: 'bold' },
-  companyText: { fontSize: 14, marginBottom: 5 },
-  buttonContainer: { flexDirection: 'row', marginTop: 10 },
-  button: { padding: 10, borderRadius: 5, marginRight: 10 },
-  saveButton: { backgroundColor: '#d3d3d3' },
-  applyButton: { backgroundColor: '#4CAF50' },
-  buttonText: { color: '#fff', fontWeight: 'bold' },
-  modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
-  modalContent: { width: '90%', padding: 20, borderRadius: 10 },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
-  description: { fontSize: 14, marginTop: 5 },
-  logo: { width: 100, height: 100, alignSelf: 'center', marginBottom: 10 },
-  closeButton: { marginTop: 10, alignSelf: 'center' },
-  closeText: { fontSize: 16, fontWeight: 'bold' }
-});
+  
+  // Header & Tabs
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  tabContainer: { flexDirection: 'row' },
+  tabText: { fontSize: 18, marginRight: 15, color: '#4A90E2' },
+  activeTab: { fontWeight: 'bold', textDecorationLine: 'underline' },
 
-export default Home;
+  jobCard: { padding: 15, marginBottom: 10, borderRadius: 5 },
+  jobTitle: { fontSize: 16, fontWeight: 'bold', color: '#fff' },
+  company: { color: '#fff' },
+  noJobsText: { textAlign: 'center', fontSize: 16, marginTop: 20, color: '#888' },
+
+  modalContainer: { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
+  modalContent: { padding: 20, borderRadius: 10, width: '90%', alignSelf: 'center' },
+  backButton: { fontSize: 16, color: '#4A90E2', marginBottom: 10 },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 5 },
+  descriptionContainer: { maxHeight: 250, marginBottom: 10 },
+
+  applyButton: { backgroundColor: '#4A90E2', padding: 10, borderRadius: 5, marginTop: 10 },
+  saveButton: { backgroundColor: '#E67E22', padding: 10, borderRadius: 5, marginTop: 10 },
+  savedButton: { backgroundColor: '#2ECC71' }, // Green when saved
+  buttonText: { color: 'white', textAlign: 'center' },
+});
