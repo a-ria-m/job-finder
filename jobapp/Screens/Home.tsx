@@ -10,7 +10,7 @@ export default function Home() {
   const [showSavedJobs, setShowSavedJobs] = useState(false);
   const navigation = useNavigation();
 
-  // Filter jobs based on whether the "Saved Jobs" tab is active
+  // Filter jobs for saved
   const displayedJobs = showSavedJobs ? jobs.filter(job => savedJobs.includes(job.id)) : jobs;
 
   return (
@@ -44,7 +44,7 @@ export default function Home() {
         ListEmptyComponent={<Text style={styles.noJobsText}>No jobs found.</Text>}
       />
 
-      {/* Job Description Popup */}
+      {/* Job Description */}
       <Modal visible={!!selectedJob} animationType="slide" transparent={true}>
         <View style={styles.modalContainer}>
           <View style={[styles.modalContent, { backgroundColor: isDarkMode ? '#1E1E1E' : '#fff' }]}>
@@ -64,7 +64,7 @@ export default function Home() {
                   {selectedJob.companyName}
                 </Text>
 
-                {/* Job Description with RenderHtml */}
+                {/* Job Description thing */}
                 <ScrollView style={styles.descriptionContainer}>
                   <RenderHtml
                     contentWidth={300}
@@ -75,17 +75,19 @@ export default function Home() {
                     }}
                   />
                 </ScrollView>
-
-<TouchableOpacity 
+                
+                <TouchableOpacity
   style={styles.applyButton}
   onPress={() => {
-    setSelectedJob(null);
-    navigation.navigate('ApplicationForm', { job: selectedJob }); // Pass job details
+    if (!selectedJob) {
+      console.error('No job selected');
+      return;
+    }
+    navigation.navigate('ApplicationForm', { job: selectedJob });
   }}
 >
   <Text style={styles.buttonText}>Apply</Text>
 </TouchableOpacity>
-
 
                 <TouchableOpacity
                   style={[
@@ -129,6 +131,6 @@ const styles = StyleSheet.create({
 
   applyButton: { backgroundColor: '#4A90E2', padding: 10, borderRadius: 5, marginTop: 10 },
   saveButton: { backgroundColor: '#E67E22', padding: 10, borderRadius: 5, marginTop: 10 },
-  savedButton: { backgroundColor: '#2ECC71' }, // Green when saved
+  savedButton: { backgroundColor: '#2ECC71' },
   buttonText: { color: 'white', textAlign: 'center' },
 });
