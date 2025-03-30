@@ -4,7 +4,9 @@
     "@types/uuid": "^10.0.0"
   },
   "dependencies": {
+    "formik": "^2.4.6",
     "react-native-render-html": "^6.3.4",
-    "react-native-uuid": "^2.0.3"
+    "react-native-uuid": "^2.0.3",
+    "yup": "^1.6.1"
   }
 }
