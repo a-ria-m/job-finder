@@ -1,41 +1,37 @@
 import React from 'react';
-import { View, Text, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
+import { 
+  View, 
+  Text, 
+  FlatList, 
+  ActivityIndicator, 
+  StyleSheet, 
+  TouchableOpacity 
+} from 'react-native';
 import { useGlobalContext } from '../context/globalContext';
 import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/props';
-
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
 export default function Home() {
-  const { isDarkMode, toggleDarkMode, theme, jobs, loading } = useGlobalContext();
+  const { jobs, loading } = useGlobalContext();
+  const navigation = useNavigation();
 
-  return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Button title="Toggle Dark Mode" onPress={toggleDarkMode} />
+  console.log("Jobs in Home:", jobs); // Debugging log
 
-      <Text style={{ color: theme.text, fontSize: 20, marginBottom: 10 }}>
-        {loading ? "Loading jobs..." : `Fetched ${jobs.length} jobs`}
-      </Text>
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#3971ef" />
+        <Text style={styles.loadingText}>Loading Jobs...</Text>
+      </View>
+    );
+  }
 
-      {loading ? (
-        <ActivityIndicator size="large" color={theme.dominant} />
-      ) : (
-        <FlatList
-          data={jobs}
-          keyExtractor={item => item.id}
-          renderItem={({ item }) => (
-            <View style={[styles.jobCard, { backgroundColor: theme.cardBackground }]}>
-              <Text style={[styles.jobTitle, { color: theme.text }]}>{item.title}</Text>
-              <Text style={{ color: theme.text }}>{item.companyName}</Text>
-              <Text style={{ color: theme.text }}>{`Salary: ${item.minSalary} - ${item.maxSalary}`}</Text>
-            </View>
-          )}
-        />
-      )}
-    </View>
-  );
-}
+  if (!jobs || jobs.length === 0) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>No jobs available.</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -44,8 +40,8 @@ export default function Home() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <TouchableOpacity 
-            style={styles.card}
-            onPress={() => navigation.navigate('ApplicationForm', { job: item })}
+            style={styles.card} 
+
           >
             <Text style={styles.title}>{item.title}</Text>
             <Text style={styles.company}>{item.companyName}</Text>
@@ -53,7 +49,7 @@ export default function Home() {
           </TouchableOpacity>
         )}
       />
-    </View>     
+    </View>
   );
 }
 
