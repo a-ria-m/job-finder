@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Switch, Modal, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Switch, Modal, StyleSheet, ScrollView, TextInput } from 'react-native';
 import RenderHtml from 'react-native-render-html';
 import { useGlobalContext } from '../context/globalContext';
 import { useNavigation } from '@react-navigation/native';
@@ -8,10 +8,14 @@ export default function Home() {
   const { isDarkMode, toggleDarkMode, jobs, savedJobs, toggleSaveJob } = useGlobalContext();
   const [selectedJob, setSelectedJob] = useState(null);
   const [showSavedJobs, setShowSavedJobs] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(''); // ✅ Search state
   const navigation = useNavigation();
 
-  // Filter jobs for saved
-  const displayedJobs = showSavedJobs ? jobs.filter(job => savedJobs.includes(job.id)) : jobs;
+  // Filter jobs
+  const displayedJobs = (showSavedJobs ? jobs.filter(job => savedJobs.includes(job.id)) : jobs).filter(job =>
+    job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    job.companyName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: isDarkMode ? '#121212' : '#F5FCFF' }]}>
@@ -27,6 +31,15 @@ export default function Home() {
         </View>
         <Switch value={isDarkMode} onValueChange={toggleDarkMode} />
       </View>
+
+      {/*  Search Bar */}
+      <TextInput
+        style={[styles.searchBar, { backgroundColor: isDarkMode ? '#333' : '#fff', color: isDarkMode ? '#fff' : '#000' }]}
+        placeholder="Search jobs..."
+        placeholderTextColor={isDarkMode ? '#aaa' : '#555'}
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+      />
 
       {/* Job List */}
       <FlatList
@@ -48,23 +61,15 @@ export default function Home() {
       <Modal visible={!!selectedJob} animationType="slide" transparent={true}>
         <View style={styles.modalContainer}>
           <View style={[styles.modalContent, { backgroundColor: isDarkMode ? '#1E1E1E' : '#fff' }]}>
-            
-            {/* Back Button */}
             <TouchableOpacity onPress={() => setSelectedJob(null)}>
               <Text style={styles.backButton}>← Back</Text>
             </TouchableOpacity>
 
-            {/* Job Title & Company */}
             {selectedJob && (
               <>
-                <Text style={[styles.modalTitle, { color: isDarkMode ? '#fff' : '#000' }]}>
-                  {selectedJob.title}
-                </Text>
-                <Text style={[styles.company, { color: isDarkMode ? '#fff' : '#000' }]}>
-                  {selectedJob.companyName}
-                </Text>
+                <Text style={[styles.modalTitle, { color: isDarkMode ? '#fff' : '#000' }]}>{selectedJob.title}</Text>
+                <Text style={[styles.company, { color: isDarkMode ? '#fff' : '#000' }]}>{selectedJob.companyName}</Text>
 
-                {/* Job Description thing */}
                 <ScrollView style={styles.descriptionContainer}>
                   <RenderHtml
                     contentWidth={300}
@@ -75,30 +80,23 @@ export default function Home() {
                     }}
                   />
                 </ScrollView>
-                
-                <TouchableOpacity
-  style={styles.applyButton}
-  onPress={() => {
-    if (!selectedJob) {
-      console.error('No job selected');
-      return;
-    }
-    navigation.navigate('ApplicationForm', { job: selectedJob });
-  }}
->
-  <Text style={styles.buttonText}>Apply</Text>
-</TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[
-                    styles.saveButton,
-                    savedJobs.includes(selectedJob.id) ? styles.savedButton : {}
-                  ]}
+                  style={styles.applyButton}
+                  onPress={() => {
+                    if (!selectedJob) return;
+                    setSelectedJob(null);
+                    navigation.navigate('ApplicationForm', { job: selectedJob });
+                  }}
+                >
+                  <Text style={styles.buttonText}>Apply</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.saveButton, savedJobs.includes(selectedJob.id) ? styles.savedButton : {}]}
                   onPress={() => toggleSaveJob(selectedJob.id)}
                 >
-                  <Text style={styles.buttonText}>
-                    {savedJobs.includes(selectedJob.id) ? 'Saved' : 'Save Job'}
-                  </Text>
+                  <Text style={styles.buttonText}>{savedJobs.includes(selectedJob.id) ? 'Saved' : 'Save Job'}</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -117,6 +115,16 @@ const styles = StyleSheet.create({
   tabContainer: { flexDirection: 'row' },
   tabText: { fontSize: 18, marginRight: 15, color: '#4A90E2' },
   activeTab: { fontWeight: 'bold', textDecorationLine: 'underline' },
+
+  // ✅ Search Bar
+  searchBar: {
+    padding: 10,
+    borderRadius: 5,
+    fontSize: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#4A90E2',
+  },
 
   jobCard: { padding: 15, marginBottom: 10, borderRadius: 5 },
   jobTitle: { fontSize: 16, fontWeight: 'bold', color: '#fff' },
