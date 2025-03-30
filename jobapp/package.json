@@ -3,7 +3,7 @@
   "license": "0BSD",
   "version": "1.0.0",
   "type": "module",
-  "main": "index.ts",
+  "main": "App.tsx",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
