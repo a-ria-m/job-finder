@@ -3,22 +3,35 @@ import { View, Text, FlatList, TouchableOpacity, Switch, Modal, StyleSheet, Scro
 import RenderHtml from 'react-native-render-html';
 import { useGlobalContext } from '../context/globalContext';
 import { useNavigation } from '@react-navigation/native';
+import { Formik } from 'formik';
+import * as Yup from 'yup';
 
 export default function Home() {
   const { isDarkMode, toggleDarkMode, jobs, savedJobs, toggleSaveJob } = useGlobalContext();
   const [selectedJob, setSelectedJob] = useState(null);
   const [showSavedJobs, setShowSavedJobs] = useState(false);
-  const [searchQuery, setSearchQuery] = useState(''); // ✅ Search state
+  const [searchQuery, setSearchQuery] = useState('');
   const navigation = useNavigation();
 
-  // Filter jobs
-  const displayedJobs = (showSavedJobs ? jobs.filter(job => savedJobs.includes(job.id)) : jobs).filter(job =>
+  // Validation schema for search bar
+  const searchValidationSchema = Yup.object().shape({
+    search: Yup.string().trim().required('Search cannot be empty'),
+  });
+
+  // Filter jobs based on search query
+  const filteredJobs = jobs.filter(job =>
     job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     job.companyName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Display saved or searched jobs
+  const displayedJobs = showSavedJobs
+    ? jobs.filter(job => savedJobs.includes(job.id))
+    : filteredJobs;
+
   return (
     <View style={[styles.container, { backgroundColor: isDarkMode ? '#121212' : '#F5FCFF' }]}>
+      
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.tabContainer}>
@@ -32,14 +45,26 @@ export default function Home() {
         <Switch value={isDarkMode} onValueChange={toggleDarkMode} />
       </View>
 
-      {/*  Search Bar */}
-      <TextInput
-        style={[styles.searchBar, { backgroundColor: isDarkMode ? '#333' : '#fff', color: isDarkMode ? '#fff' : '#000' }]}
-        placeholder="Search jobs..."
-        placeholderTextColor={isDarkMode ? '#aaa' : '#555'}
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-      />
+      {/* Search Bar with Formik */}
+      <Formik
+        initialValues={{ search: '' }}
+        validationSchema={searchValidationSchema}
+        onSubmit={(values) => setSearchQuery(values.search)}
+      >
+        {({ handleChange, handleSubmit, values, errors, touched }) => (
+          <View>
+            <TextInput
+              style={styles.searchBar}
+              placeholder="Search jobs..."
+              value={values.search}
+              onChangeText={handleChange('search')}
+              onSubmitEditing={handleSubmit}
+              placeholderTextColor={isDarkMode ? '#bbb' : '#555'}
+            />
+            {touched.search && errors.search && <Text style={styles.errorText}>{errors.search}</Text>}
+          </View>
+        )}
+      </Formik>
 
       {/* Job List */}
       <FlatList
@@ -57,19 +82,27 @@ export default function Home() {
         ListEmptyComponent={<Text style={styles.noJobsText}>No jobs found.</Text>}
       />
 
-      {/* Job Description */}
+      {/* Job Description Popup */}
       <Modal visible={!!selectedJob} animationType="slide" transparent={true}>
         <View style={styles.modalContainer}>
           <View style={[styles.modalContent, { backgroundColor: isDarkMode ? '#1E1E1E' : '#fff' }]}>
+            
+            {/* Back Button */}
             <TouchableOpacity onPress={() => setSelectedJob(null)}>
               <Text style={styles.backButton}>← Back</Text>
             </TouchableOpacity>
 
+            {/* Job Title & Company */}
             {selectedJob && (
               <>
-                <Text style={[styles.modalTitle, { color: isDarkMode ? '#fff' : '#000' }]}>{selectedJob.title}</Text>
-                <Text style={[styles.company, { color: isDarkMode ? '#fff' : '#000' }]}>{selectedJob.companyName}</Text>
+                <Text style={[styles.modalTitle, { color: isDarkMode ? '#fff' : '#000' }]}>
+                  {selectedJob.title}
+                </Text>
+                <Text style={[styles.company, { color: isDarkMode ? '#fff' : '#000' }]}>
+                  {selectedJob.companyName}
+                </Text>
 
+                {/* Job Description */}
                 <ScrollView style={styles.descriptionContainer}>
                   <RenderHtml
                     contentWidth={300}
@@ -81,11 +114,11 @@ export default function Home() {
                   />
                 </ScrollView>
 
+                {/* Apply & Save Job Buttons */}
                 <TouchableOpacity
                   style={styles.applyButton}
                   onPress={() => {
                     if (!selectedJob) return;
-                    setSelectedJob(null);
                     navigation.navigate('ApplicationForm', { job: selectedJob });
                   }}
                 >
@@ -93,10 +126,15 @@ export default function Home() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.saveButton, savedJobs.includes(selectedJob.id) ? styles.savedButton : {}]}
+                  style={[
+                    styles.saveButton,
+                    savedJobs.includes(selectedJob.id) ? styles.savedButton : {},
+                  ]}
                   onPress={() => toggleSaveJob(selectedJob.id)}
                 >
-                  <Text style={styles.buttonText}>{savedJobs.includes(selectedJob.id) ? 'Saved' : 'Save Job'}</Text>
+                  <Text style={styles.buttonText}>
+                    {savedJobs.includes(selectedJob.id) ? 'Saved' : 'Save Job'}
+                  </Text>
                 </TouchableOpacity>
               </>
             )}
@@ -116,27 +154,31 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 18, marginRight: 15, color: '#4A90E2' },
   activeTab: { fontWeight: 'bold', textDecorationLine: 'underline' },
 
-  // ✅ Search Bar
+  // Search Bar
   searchBar: {
     padding: 10,
-    borderRadius: 5,
-    fontSize: 16,
-    marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#4A90E2',
+    borderRadius: 5,
+    marginBottom: 10,
+    borderColor: '#ccc',
+    backgroundColor: '#fff',
   },
+  errorText: { color: 'red', fontSize: 12, marginBottom: 10 },
 
+  // Job Card
   jobCard: { padding: 15, marginBottom: 10, borderRadius: 5 },
   jobTitle: { fontSize: 16, fontWeight: 'bold', color: '#fff' },
   company: { color: '#fff' },
   noJobsText: { textAlign: 'center', fontSize: 16, marginTop: 20, color: '#888' },
 
+  // Modal
   modalContainer: { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
   modalContent: { padding: 20, borderRadius: 10, width: '90%', alignSelf: 'center' },
   backButton: { fontSize: 16, color: '#4A90E2', marginBottom: 10 },
   modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 5 },
   descriptionContainer: { maxHeight: 250, marginBottom: 10 },
 
+  // Buttons
   applyButton: { backgroundColor: '#4A90E2', padding: 10, borderRadius: 5, marginTop: 10 },
   saveButton: { backgroundColor: '#E67E22', padding: 10, borderRadius: 5, marginTop: 10 },
   savedButton: { backgroundColor: '#2ECC71' },
